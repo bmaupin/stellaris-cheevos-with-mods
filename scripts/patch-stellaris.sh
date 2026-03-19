@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
 
+bin_path="/home/${USER}/.local/share/Steam/steamapps/common/Stellaris/stellaris"
+
 if [ -z "${1}" ]; then
-    echo 'Error: please provide path to the Stellaris binary to patch'
-    echo "Usage: $0 BINARY_PATH"
-    exit 1
+    echo "No path provided; using ${bin_path}"
+    echo
+
+    if [[ ! -f "${bin_path}" ]]; then
+        echo "Error: Stellaris binary not found. Please make sure it's installed or provide an alternative path as a parameter to this script."
+        exit 1
+    fi
 fi
 
-bin_path="${1}"
+if [ -n "${1}" ]; then
+    bin_path="$1"
+
+    if [[ ! -f "${bin_path}" ]]; then
+        echo "Error: No file exists at ${bin_path}"
+        exit 1
+    fi
+fi
 
 getdatachksum_function_name=_ZNK9CChecksum13GetDataChkSumEv
 # Make sure the function name hasn't changed
