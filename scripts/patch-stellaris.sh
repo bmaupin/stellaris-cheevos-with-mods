@@ -21,6 +21,11 @@ if [ -n "${1}" ]; then
     fi
 fi
 
+if ! file "${bin_path}" | grep -q ELF; then
+    echo "Error: ${bin_path} is not a Linux executable"
+    exit 1
+fi
+
 getdatachksum_function_name=_ZNK9CChecksum13GetDataChkSumEv
 # Make sure the function name hasn't changed
 if ! objdump -d --disassemble="${getdatachksum_function_name}" "${bin_path}" | grep -q "${getdatachksum_function_name}"; then
@@ -43,7 +48,11 @@ fi
 virtual_address=$(objdump -d --disassemble="${initgame_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "test   %ebx,%ebx" | awk '{print $1}' | sed 's/://')
 
 if [[ -z "$virtual_address" ]]; then
-    echo "Unable to find address to patch; has the file already been patched?"
+    virtual_address=$(objdump -d --disassemble="${initgame_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "xor    %ebx,%ebx" | awk '{print $1}' | sed 's/://')
+fi
+
+if [[ -z "$virtual_address" ]]; then
+    echo "Unable to find address to patch; aborting"
     exit 1
 fi
 
@@ -55,26 +64,30 @@ file_offset=$((0x$virtual_address + 0x$text_file_offset - 0x$text_virtual_offset
 
 bytes=$(xxd -p -l 2 --seek "${file_offset}" "${bin_path}" | tr -d '\n')
 
-# Make sure bytes match what we expect
-if [[ "${bytes}" != "85db" ]]; then
+# See https://steamcommunity.com/sharedfiles/filedetails/?id=2460079052
+expected_bytes='85db'
+patched_bytes='31db'
+
+if [[ "${bytes}" == "${patched_bytes}" ]]; then
+    echo "Achievements with mods patch already applied"
+    echo
+elif [[ "${bytes}" == "${expected_bytes}" ]]; then
+    echo "Patch the checksum test to make achivements earnable with mods that modify the checksum integrity"
+    echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_bytes}"
+    echo
+    # Write the patched bytes back to the binary file
+    echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
+    echo
+else
     echo "Unexpected bytes at offset ${file_offset}: ${bytes}"
     echo "This shouldn't happen; please check the binary file."
     exit 1
 fi
 
-# Subtract 0 instead of 1 so that the number of turn resets never decreases
-patched_bytes='31db'
-
-echo "Patch the checksum test to make achivements earnable with mods that modify the checksum integrity"
-echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_bytes}"
-echo
-
-# Write the patched bytes back to the binary file
-echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
 
 
-
-# Exit early and skip aesthetic patches
+# Comment this out to apply aesthetic patches
+echo "NOTE: Not applying aesthetic patches"
 exit
 
 
@@ -92,7 +105,11 @@ fi
 virtual_address=$(objdump -d --disassemble="${applyversion_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "test   %eax,%eax" | awk '{print $1}' | sed 's/://')
 
 if [[ -z "$virtual_address" ]]; then
-    echo "Unable to find address to patch; has the file already been patched?"
+    virtual_address=$(objdump -d --disassemble="${applyversion_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "xor    %eax,%eax" | awk '{print $1}' | sed 's/://')
+fi
+
+if [[ -z "$virtual_address" ]]; then
+    echo "Unable to find address to patch; aborting"
     exit 1
 fi
 
@@ -104,23 +121,24 @@ file_offset=$((0x$virtual_address + 0x$text_file_offset - 0x$text_virtual_offset
 
 bytes=$(xxd -p -l 2 --seek "${file_offset}" "${bin_path}" | tr -d '\n')
 
-# Make sure bytes match what we expect
-if [[ "${bytes}" != "85c0" ]]; then
+expected_bytes='85c0'
+patched_bytes='31c0'
+
+if [[ "${bytes}" == "${patched_bytes}" ]]; then
+    echo "Warning indicator patch already applied"
+    echo
+elif [[ "${bytes}" == "${expected_bytes}" ]]; then
+    echo "Patch the yellow warning indicating the checksum is modified"
+    echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_bytes}"
+    echo
+    # Write the patched bytes back to the binary file
+    echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
+    echo
+else
     echo "Unexpected bytes at offset ${file_offset}: ${bytes}"
     echo "This shouldn't happen; please check the binary file."
     exit 1
 fi
-
-# Subtract 0 instead of 1 so that the number of turn resets never decreases
-patched_bytes='31c0'
-
-echo "Patch the yellow warning indicating the checksum is modified"
-echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_bytes}"
-echo
-
-# Write the patched bytes back to the binary file
-echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
-
 
 
 # ************************************ Patch tooltip ************************************
@@ -136,7 +154,11 @@ fi
 virtual_address=$(objdump -d --disassemble="${gettooltip_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "test   %eax,%eax" | awk '{print $1}' | sed 's/://')
 
 if [[ -z "$virtual_address" ]]; then
-    echo "Unable to find address to patch; has the file already been patched?"
+    virtual_address=$(objdump -d --disassemble="${gettooltip_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "xor    %eax,%eax" | awk '{print $1}' | sed 's/://')
+fi
+
+if [[ -z "$virtual_address" ]]; then
+    echo "Unable to find address to patch; aborting"
     exit 1
 fi
 
@@ -148,19 +170,21 @@ file_offset=$((0x$virtual_address + 0x$text_file_offset - 0x$text_virtual_offset
 
 bytes=$(xxd -p -l 2 --seek "${file_offset}" "${bin_path}" | tr -d '\n')
 
-# Make sure bytes match what we expect
-if [[ "${bytes}" != "85c0" ]]; then
+expected_bytes='85c0'
+patched_bytes='31c0'
+
+if [[ "${bytes}" == "${patched_bytes}" ]]; then
+    echo "Tooltip patch already applied"
+    echo
+elif [[ "${bytes}" == "${expected_bytes}" ]]; then
+    echo "Patch the tooltip text indicating that the checksum is modified"
+    echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_bytes}"
+    echo
+    # Write the patched bytes back to the binary file
+    echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
+    echo
+else
     echo "Unexpected bytes at offset ${file_offset}: ${bytes}"
     echo "This shouldn't happen; please check the binary file."
     exit 1
 fi
-
-# Subtract 0 instead of 1 so that the number of turn resets never decreases
-patched_bytes='31c0'
-
-echo "Patch the tooltip text indicating that the checksum is modified"
-echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_bytes}"
-echo
-
-# Write the patched bytes back to the binary file
-echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
