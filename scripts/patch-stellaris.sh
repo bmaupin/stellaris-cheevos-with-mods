@@ -8,14 +8,24 @@ fi
 
 bin_path="${1}"
 
-echo "Searching for CChecksum::GetDataChkSum function ..."
-echo
-getdatachksum_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CChecksum::GetDataChkSum() const>:' | awk '{print $1}')
-getdatachksum_function_name=$(nm "${bin_path}" | grep "${getdatachksum_virtual_address}" | awk '{print $3}')
+getdatachksum_function_name=_ZNK9CChecksum13GetDataChkSumEv
+# Make sure the function name hasn't changed
+if ! objdump -d --disassemble="${getdatachksum_function_name}" "${bin_path}" | grep -q "${getdatachksum_function_name}"; then
+    echo "Searching for CChecksum::GetDataChkSum function ..."
+    echo
+    getdatachksum_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CChecksum::GetDataChkSum() const>:' | awk '{print $1}')
+    getdatachksum_function_name=$(nm "${bin_path}" | grep "${getdatachksum_virtual_address}" | awk '{print $3}')
+fi
 
-echo "Searching for CGameApplication::InitGame function ..."
-initgame_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CGameApplication::InitGame()>:' | awk '{print $1}')
-initgame_function_name=$(nm "${bin_path}" | grep "${initgame_virtual_address}" | awk '{print $3}')
+
+
+# ************************************ Cheevo patch ************************************
+initgame_function_name=_ZN16CGameApplication8InitGameEv
+if ! objdump -d --disassemble="${initgame_function_name}" "${bin_path}" | grep -q "${initgame_function_name}"; then
+    echo "Searching for CGameApplication::InitGame function ..."
+    initgame_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CGameApplication::InitGame()>:' | awk '{print $1}')
+    initgame_function_name=$(nm "${bin_path}" | grep "${initgame_virtual_address}" | awk '{print $3}')
+fi
 
 virtual_address=$(objdump -d --disassemble="${initgame_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "test   %ebx,%ebx" | awk '{print $1}' | sed 's/://')
 
@@ -47,13 +57,24 @@ echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_byt
 echo
 
 # Write the patched bytes back to the binary file
-# echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
+echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
 
 
 
-echo "Searching for CGameGraphics::ApplyVersionToTextBox function ..."
-applyversion_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CGameGraphics::ApplyVersionToTextBox(CInstantTextBox\*)>:' | awk '{print $1}')
-applyversion_function_name=$(nm "${bin_path}" | grep "${applyversion_virtual_address}" | awk '{print $3}')
+# Exit early and skip aesthetic patches
+exit
+
+
+
+# ************************************ Patch warning ************************************
+# Without this, the version number on the main screen is yellow. As best as I can tell
+# this is only aesthetic.
+applyversion_function_name=_ZN13CGameGraphics21ApplyVersionToTextBoxEP15CInstantTextBox
+if ! objdump -d --disassemble="${applyversion_function_name}" "${bin_path}" | grep -q "${applyversion_function_name}"; then
+    echo "Searching for CGameGraphics::ApplyVersionToTextBox function ..."
+    applyversion_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CGameGraphics::ApplyVersionToTextBox(CInstantTextBox\*)>:' | awk '{print $1}')
+    applyversion_function_name=$(nm "${bin_path}" | grep "${applyversion_virtual_address}" | awk '{print $3}')
+fi
 
 virtual_address=$(objdump -d --disassemble="${applyversion_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "test   %eax,%eax" | awk '{print $1}' | sed 's/://')
 
@@ -85,14 +106,19 @@ echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_byt
 echo
 
 # Write the patched bytes back to the binary file
-# echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
+echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
 
 
 
-
-echo "Searching for CGameGraphics::GetToolTip function ..."
-gettooltip_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CGameGraphics::GetToolTip(CGuiObject const\*, CToolTip&) const>:' | awk '{print $1}')
-gettooltip_function_name=$(nm "${bin_path}" | grep "${gettooltip_virtual_address}" | awk '{print $3}')
+# ************************************ Patch tooltip ************************************
+# Without this, the version number on the main screen has a warning that indicates the
+# game is modified. As best as I can tell this is only aesthetic.
+gettooltip_function_name=_ZNK13CGameGraphics10GetToolTipEPK10CGuiObjectR8CToolTip
+if ! objdump -d --disassemble="${gettooltip_function_name}" "${bin_path}" | grep -q "${gettooltip_function_name}"; then
+    echo "Searching for CGameGraphics::GetToolTip function ..."
+    gettooltip_virtual_address=$(objdump -d --demangle "${bin_path}" | grep '<CGameGraphics::GetToolTip(CGuiObject const\*, CToolTip&) const>:' | awk '{print $1}')
+    gettooltip_function_name=$(nm "${bin_path}" | grep "${gettooltip_virtual_address}" | awk '{print $3}')
+fi
 
 virtual_address=$(objdump -d --disassemble="${gettooltip_function_name}" "${bin_path}" | grep -A 10 "${getdatachksum_function_name}" | grep "test   %eax,%eax" | awk '{print $1}' | sed 's/://')
 
@@ -124,4 +150,4 @@ echo "    Patching bytes at offset ${file_offset} from ${bytes} to ${patched_byt
 echo
 
 # Write the patched bytes back to the binary file
-# echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
+echo "${patched_bytes}" | xxd -p -r | dd of="${bin_path}" bs=1 conv=notrunc seek="${file_offset}"
