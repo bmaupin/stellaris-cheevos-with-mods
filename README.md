@@ -12,6 +12,12 @@ For a GUI tool that supports Linux and Windows/Proton, see [Stellaris Checksum P
 ./scripts/patch-stellaris.sh
 ```
 
+To have the patch tool run every time you start the game, in Steam go to the game Properties and add the patch tool to your _Launch Options_, e.g.
+
+```
+"/home/$USER/workspace/stellaris-cheevos-with-mods/scripts/patch-stellaris.sh" && %command%
+```
+
 ## Uninstall
 
 To uninstall the patch:

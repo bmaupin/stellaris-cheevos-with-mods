@@ -87,7 +87,7 @@ fi
 
 
 # Comment this out to apply aesthetic patches
-echo "NOTE: Not applying aesthetic patches"
+echo "NOTE: Not applying aesthetic patches; see script for how to apply them"
 exit
 
 
