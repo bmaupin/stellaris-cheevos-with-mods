@@ -1,0 +1,3 @@
+- Communicate concisely
+- Only provide guidance and do not write to any files unless requested
+- Use British English spelling

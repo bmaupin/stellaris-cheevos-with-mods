@@ -1,6 +1,6 @@
 # Enable achievements with mods in Stellaris
 
-This is a simple proof-of-concept patch script to patch Stellaris in a version-independent way to allow achievements with mods.
+This is a simple patch script to patch Stellaris in a version-independent way to allow achievements with mods.
 
 This is only for Linux.
 
