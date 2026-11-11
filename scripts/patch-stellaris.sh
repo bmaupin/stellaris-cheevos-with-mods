@@ -92,8 +92,8 @@ patch_binary_with_symbols() {
 
 
 
-    # Comment this out to apply aesthetic patches
-    echo "NOTE: Not applying aesthetic patches; see script for how to apply them"
+    # Comment this out to apply aesthetic patches; they are intentionally disabled because
+    # they give visual feedback that the game has been modified
     exit
 
 
@@ -148,8 +148,8 @@ patch_binary_with_symbols() {
 
 
     # ************************************ Patch tooltip ************************************
-    # Without this, the version number on the main screen has a warning that indicates the
-    # game is modified. As best as I can tell this is only aesthetic.
+    # Without this, the version number on the main screen has a tooltip message that
+    # indicates the game is modified. As best as I can tell this is only aesthetic.
     gettooltip_function_name=_ZNK13CGameGraphics10GetToolTipEPK10CGuiObjectR8CToolTip
     if ! objdump -d --disassemble="${gettooltip_function_name}" "${bin_path}" | grep -q "${gettooltip_function_name}"; then
         echo "Searching for CGameGraphics::GetToolTip function ..."
@@ -291,8 +291,6 @@ patch_binary_without_symbols() {
         echo "This shouldn't happen; please check the binary file."
         exit 1
     fi
-
-    echo "NOTE: Not applying aesthetic patches"
 }
 
 # See if the binary has symbols; the binary was stripped as of update 4.5.3 (2026-11-04)
